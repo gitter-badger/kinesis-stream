@@ -1,6 +1,6 @@
 name := "kinesis-stream"
 
-version := "1.0"
+version := "0.1"
 
 organization := "com.localytics"
 
@@ -54,4 +54,4 @@ bintrayOrganization := Some("localytics")
 
 bintrayReleaseOnPublish in ThisBuild := false
 
-bintrayPackageLabels := Seq("localytics", "scalaz-stream", "aws", "kinesis", "kpl")
+bintrayPackageLabels := Seq("localytics", "scalaz-stream", "aws", "kinesis", "kpl", "kcl")
