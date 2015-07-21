@@ -63,7 +63,7 @@ object DeepDive {
       )
     }
 
-    /** Now that we have a KinesisWriter, we can put it to use. **/
+    //// Now that we have a KinesisWriter, we can put it to use. ////
 
     // Get a scalaz-stream Channel that accepts Strings
     // and outputs UserRecordResult returned from the KPL

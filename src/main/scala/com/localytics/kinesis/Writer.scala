@@ -22,8 +22,6 @@ object Writer {
    */
   def idWriter[A](implicit e: ExecutorService) = new Writer[A, A] { self =>
     def eval(a:A) = executorChannel(a, e)(identity)
-//    def onFailure(t: Throwable): Unit = { /* intentionally do nothing */ }
-//    def onSuccess(res: A): Unit = { /* intentionally do nothing */ }
   }
 
   // Functor instance for ListenableFuture
@@ -46,8 +44,6 @@ object Writer {
       def contramap[A, B](r: Writer[A, O])(f: B => A): Writer[B, O] =
         new Writer[B, O] {
           def eval(b: B): ListenableFuture[O] = r.eval(f(b))
-//          def onFailure(t: Throwable): Unit = r.onFailure(t)
-//          def onSuccess(result: O): Unit = r.onSuccess(result)
         }
     }
 
