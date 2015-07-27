@@ -6,10 +6,6 @@ import scalaz.stream.{channel => _, _}
 import scalaz.syntax.either._
 import Process._
 
-/**
- * scalaz-stream extension providing functionality for
- * handling operations that return ListenableFutures
- */
 object Writer {
 
   /**
