@@ -1,6 +1,6 @@
-[![Build Status](https://travis-ci.org/joshcough/kinesis-stream.png?branch=master)](https://travis-ci.org/joshcough/kinesis-stream)
-[![Coverage Status](https://coveralls.io/repos/joshcough/kinesis-stream/badge.svg?branch=master)](https://coveralls.io/r/joshcough/kinesis-stream?branch=master)
-[![Join the chat at https://gitter.im/joshcough/kinesis-stream](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/joshcough/kinesis-stream?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Build Status](https://travis-ci.org/localytics/kinesis-stream.png?branch=master)](https://travis-ci.org/joshcough/kinesis-stream)
+[![Coverage Status](https://coveralls.io/repos/localytics/kinesis-stream/badge.svg?branch=master)](https://coveralls.io/r/joshcough/kinesis-stream?branch=master)
+[![Join the chat at https://gitter.im/joshcough/kinesis-stream](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/localytics/kinesis-stream?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 `
 # kinesis-stream
 
