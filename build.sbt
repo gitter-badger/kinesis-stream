@@ -8,6 +8,8 @@ scalaVersion := "2.11.7"
 
 licenses += ("MIT", url("http://opensource.org/licenses/MIT"))
 
+unmanagedSourceDirectories in Compile += baseDirectory.value / "src/examples"
+
 resolvers ++= Seq(
   "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
  ,"Scalaz Bintray Repo" at "https://dl.bintray.com/scalaz/releases"
@@ -19,9 +21,6 @@ libraryDependencies ++= Seq(
  ,"org.scalaz.stream" %% "scalaz-stream"           % "0.7.1a"
  ,"com.amazonaws"      % "amazon-kinesis-producer" % "0.9.0"
  ,"org.scalacheck"    %% "scalacheck"              % "1.12.4"  % "test"
- ,"org.mockito"        % "mockito-all"             % "1.9.5"   % "test"
- ,"org.scalatest"     %% "scalatest"               % "2.2.4"   % "test"
- ,"org.pegdown"        % "pegdown"                 % "1.5.0"   % "test"
 )
 
 // TODO:
@@ -37,7 +36,6 @@ scalacOptions ++= Seq(
  ,"-Xfatal-warnings"
  ,"-Xlint"
  ,"-Ywarn-adapted-args"
- ,"-Ywarn-dead-code"
  ,"-Ywarn-numeric-widen"
  ,"-Ywarn-value-discard"
  ,"-Xfuture"

@@ -6,7 +6,10 @@ import java.util.concurrent.ExecutorService
 import com.amazonaws.kinesis.producer.{KinesisProducer, UserRecordResult}
 import com.google.common.util.concurrent.{MoreExecutors, ListenableFuture}
 
-import scalaz.{Contravariant, Functor}
+import scalaz.{\/, Contravariant, Functor}
+import scalaz.syntax.either._
+import scalaz.syntax.functor._
+import Writer._
 
 /**
  *
@@ -31,7 +34,7 @@ object KinesisWriter {
    *
    * This executor can be used easily when publishing like so:
    *
-   *   implicit val e: Executor = KinesisWriter.defaultExecutor
+   *   implicit val e: ExecutorService = KinesisWriter.defaultExecutor
    *   val k = new KinesisWriter{ ... }
    *
    *   ...
@@ -42,7 +45,7 @@ object KinesisWriter {
    *
    *  However, it's a naive executor that just runs the callbacks
    *  directly on the current thread. If you need something else,
-   *  simple have another implicit Executor in scope
+   *  simple have another implicit ExecutorService in scope
    */
   implicit val defaultExecutor: ExecutorService = MoreExecutors.newDirectExecutorService()
 
@@ -124,8 +127,12 @@ trait KinesisWriter[I] extends Writer[I, UserRecordResult] { self =>
    * @param i
    * @return
    */
-  def eval(i:I): ListenableFuture[UserRecordResult] = {
+  def eval(i:I): ListenableFuture[Throwable \/ UserRecordResult] = {
     val r = toInputRecord(i)
-    kinesisProducer.addUserRecord(r.stream, r.partitionKey, r.payload)
+    // Presumably, KPL catches all errors, and never allows an exception
+    // to be thrown (assumed because UserResultRecord has a successful field).
+    // The map(_.right) here is just a formality.
+    kinesisProducer.addUserRecord(
+      r.stream, r.partitionKey, r.payload).map(_.right)
   }
 }
