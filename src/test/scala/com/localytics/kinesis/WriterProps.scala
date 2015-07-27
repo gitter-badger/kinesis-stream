@@ -5,12 +5,12 @@ import org.scalacheck.Properties
 import org.scalacheck.Prop._
 import Writer._
 
+import scalaz.concurrent.Task
 import scalaz.stream.Process
 import scalaz.{-\/, \/, \/-}
+import scalaz.syntax.either._
 
 object WriterProps extends Properties("Writer") {
-
-  implicit val e: ListeningExecutorService = M.newDirectExecutorService()
 
   // TODO: make generator for Process[A]
   implicit class RichList[A](l:List[A]) {
@@ -19,17 +19,17 @@ object WriterProps extends Properties("Writer") {
 
   property("simple example") = secure {
     val helloWorld = "Hello, world.".split(' ')
-    val result = stringCharWriter.collect(Process(helloWorld:_*))
+    val result = stringCharWriter.run(Process(helloWorld:_*))
     val expected = mkRight(helloWorld.map(_.toList))
     all(result.size == 2, result == expected)
   }
 
   property("gracefully handle writing empty logs") = secure {
-    idWriter[Int].collect(Process()).isEmpty
+    idWriter[Int].run(Process()).isEmpty
   }
 
   property("identity writer") = forAll { (strings: List[String]) =>
-    val actual = idWriter.collect(strings.toProc).filter(_.isRight)
+    val actual = idWriter.run(strings.toProc).filter(_.isRight)
     val expected = mkRight(strings)
     actual == expected
   }
@@ -37,22 +37,22 @@ object WriterProps extends Properties("Writer") {
   property("contramap writer") = forAll { (strings: List[String]) =>
     val writer = idWriter.contramap[List[Char]](_.mkString)
     val actual: Seq[Throwable \/ String] =
-      writer.collect(strings.map(_.toList).toProc)
+      writer.run(strings.map(_.toList).toProc)
     val expected = mkRight(strings)
     actual == expected
   }
 
-  property("exceptions in output should be caught") =
-    forAll { (dataPoints: List[Int]) =>
-      val results = badWriter[Int].collect(dataPoints.toProc)
-      all(results.forall(_.isLeft), results.size == dataPoints.size)
-    }
+  property("will not catch exceptions in async tasks") =
+    forAll { (dataPoints: List[Int]) => dataPoints.nonEmpty ==> {
+      try { badWriter[Int].run(dataPoints.toProc); false }
+      catch { case e: StringException => true }
+    }}
 
   property("handle streams with some good data and some errors") =
     forAll { (dataPoints: List[Int]) =>
       def go(i:Int) = if (even(i)) i else throw new IntException(i)
-      val p = Process(dataPoints:_*).map(a => safely(go(a)))
-      val results = idWriter[Int].collectV(p)
+      val p = Process(dataPoints:_*).map(a => Task.Try(go(a)))
+      val results = idWriter[Int].runV(p)
       all(
         results.forall { _.fold({case IntException(i) => odd(i)}, even) }
        ,results.size == dataPoints.size
@@ -74,16 +74,16 @@ object WriterProps extends Properties("Writer") {
   def mkRight[A](as:Seq[A]) = as.map(\/-(_))
   def mkLeft [A](as:Seq[A]) = as.map(-\/(_))
 
-  def badWriter[A](implicit e: ListeningExecutorService) =
+  def badWriter[A] =
     new Writer[A, A] {
-      def eval(a: A) = buildFuture(a)({ (a1: A) =>
-        throw new StringException(a1.toString)
-      })(e)
+      def asyncTask(a: => A): Task[Throwable \/ A] =
+        Task.delay(throw new StringException(a.toString))
     }
 
-  def stringCharWriter(implicit e: ListeningExecutorService) =
+  def stringCharWriter =
     new Writer[String, List[Char]] { self =>
-      def eval(s:String) = buildFuture(s)(_.toList)(e)
+      def asyncTask(a: => String): Task[Throwable \/ List[Char]] =
+        Task.delay(a.toList.right)
     }
 }
 

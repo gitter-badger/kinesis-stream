@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/joshcough/kinesis-stream.png?branch=master)](https://travis-ci.org/joshcough/kinesis-stream)
 [![Coverage Status](https://coveralls.io/repos/joshcough/kinesis-stream/badge.svg?branch=master)](https://coveralls.io/r/joshcough/kinesis-stream?branch=master)
 [![Join the chat at https://gitter.im/joshcough/kinesis-stream](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/joshcough/kinesis-stream?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
+`
 # kinesis-stream
 
 kinesis-stream is a scalaz-stream API for Amazon Kinesis.
@@ -23,9 +23,8 @@ This is all you need to get started:
 ```scala
 object GettingStartedFast {
   def gettingStarted : Process[Task, Throwable \/ UserRecordResult] = {
-    val kw = new KinesisWriter[String] {
-      val kinesisProducer: KinesisProducer = new KinesisProducer()
-      def toInputRecord(s: String) = KinesisInputRecord(
+    val kw = new KinesisWriter[String](new KinesisProducer()) {
+      def toInputRecord(s: => String) = KinesisInputRecord(
         "my-stream", partitionKey(s), ByteBuffer.wrap(s.getBytes)
       )
     }
@@ -50,11 +49,12 @@ object DeepDive {
 
   def deepDive : Channel[Task, Throwable \/ String, Throwable \/ UserRecordResult] = {
 
+    // The writer needs an actual AWS KinesisProducer object
+    val kinesisProducer = new KinesisProducer()
+
     // Create a KinesisWriter that writes Strings to Kinesis
     // You can write anything that you can Serialize to bytes
-    val kw = new KinesisWriter[String] {
-      // The writer needs an actual AWS KinesisProducer object
-      val kinesisProducer = new KinesisProducer()
+    val kw = new KinesisWriter[String](kinesisProducer) {
 
       /**
        * Kinesis needs to know 3 things:
@@ -65,7 +65,7 @@ object DeepDive {
        * This info is captured in a KinesisInputRecord
        * which you create in toInputRecord using your input.
        */
-      def toInputRecord(s: String) = KinesisInputRecord(
+      def toInputRecord(s: => String) = KinesisInputRecord(
         "my-stream", "shard-" + s, ByteBuffer.wrap(s.getBytes)
       )
     }

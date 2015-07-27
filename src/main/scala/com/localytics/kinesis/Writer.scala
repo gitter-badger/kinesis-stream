@@ -1,12 +1,9 @@
 package com.localytics.kinesis
 
-import com.google.common.util.concurrent.{ListeningExecutorService, FutureCallback, Futures, ListenableFuture}
-import java.util.concurrent.{Executor, TimeUnit, ExecutorService, Callable}
 import scalaz._
 import scalaz.concurrent.Task
 import scalaz.stream.{channel => _, _}
 import scalaz.syntax.either._
-import scalaz.syntax.functor._
 import Process._
 
 /**
@@ -17,26 +14,11 @@ object Writer {
 
   /**
    * The writer that simply returns its input.
-   * @param e
    * @tparam A
    * @return
    */
-  def idWriter[A](implicit e: ListeningExecutorService) =
-    new Writer[A, A] { self =>
-      def eval(a:A) = buildFuture(a)(identity)(e)
-    }
-
-  // Functor instance for ListenableFuture
-  implicit val ListenableFutureFunctor = new Functor[ListenableFuture] {
-    def map[A, B](fa: ListenableFuture[A])(f: A => B): ListenableFuture[B] =
-      new ListenableFuture[B] {
-        def addListener(r: Runnable, e: Executor): Unit = fa.addListener(r,e)
-        def isCancelled: Boolean = fa.isCancelled
-        def get(): B = f(fa.get)
-        def get(timeout: Long, unit: TimeUnit): B = f(fa.get(timeout, unit))
-        def cancel(mayInterruptIfRunning: Boolean): Boolean = fa.cancel(mayInterruptIfRunning)
-        def isDone: Boolean = fa.isDone
-      }
+  def idWriter[A] = new Writer[A, A] { self =>
+    def asyncTask(i: => A): Task[Throwable \/ A] = Task.delay(i.right)
   }
 
   // Covariant Functor instance for Writer
@@ -45,36 +27,15 @@ object Writer {
     new Contravariant[Writer[?, O]] {
       def contramap[A, B](r: Writer[A, O])(f: B => A): Writer[B, O] =
         new Writer[B, O] {
-          def eval(b: B): ListenableFuture[Throwable \/ O] = r.eval(f(b))
+          def asyncTask(b: => B): Task[Throwable \/ O] = r.asyncTask(f(b))
         }
     }
-
-  /**
-   * Build a ListenableFuture that will run the computation (f)
-   * on the input (i) on the executor service (es)
-   */
-  def buildFuture[I,O](i: => I)(f: I => O)
-                      (implicit es: ListeningExecutorService):
-    ListenableFuture[Throwable \/ O] =
-      es.submit(new Callable[Throwable \/ O] {
-        def call: Throwable \/ O =
-          try f(i).right catch { case t: Throwable => t.left }
-      })
-
-  /**
-   * This might already exist somewhere.
-   * @param a
-   * @tparam A
-   * @return
-   */
-  def safely[A](a: => A): Throwable \/ A =
-    try a.right
-    catch { case t: Throwable => t.left }
 }
 
 /**
- * scalaz-stream extension providing functionality for
- * handling operations that return ListenableFutures
+ * Writer is now just a very thin wrapper over scalaz-stream
+ * If you can produce a Task[O] from an I, then you get a few
+ * nice little functions for building processes and channels.
  * @tparam I
  * @tparam O
  */
@@ -91,47 +52,38 @@ trait Writer[-I,O] { self =>
    * @param i
    * @return
    */
-  def eval(i:I): ListenableFuture[Throwable \/ O]
+  def asyncTask(i: => I): Task[Throwable \/ O]
 
   /**
    * Run the input through the writers process,
    * collecting the results.
    * @param p
-   * @param e
    * @return
    */
-  def collect(p: Process0[I])
-             (implicit e: ExecutorService): Seq[Throwable \/ O] =
-    process(p)(e).runLog.run
+  def run(p: Process0[I]): Seq[Throwable \/ O] = process(p).runLog.run
 
   /**
    *
    * @param p
-   * @param e
    * @return
    */
-  def collectV(p: Process0[Throwable \/ I])
-              (implicit e: ExecutorService): Seq[Throwable \/ O] =
-    processV(p)(e).runLog.run
+  def runV(p: Process0[Throwable \/ I]): Seq[Throwable \/ O] =
+    processV(p).runLog.run
 
   /**
    * Run the input through the writers asyncProcess,
    * discarding the results.
    * @param p
-   * @param e
    * @return
    */
-  def writeV(p: Process0[Throwable \/ I])(implicit e: ExecutorService): Unit =
-    processV(p).run.run
+  def writeV(p: Process0[Throwable \/ I]): Unit = processV(p).run.run
 
   /**
    *
    * @param p
-   * @param e
    * @return
    */
-  def write(p: Process0[I])(implicit e: ExecutorService): Unit =
-    process(p).run.run
+  def write(p: Process0[I]): Unit = process(p).run.run
 
   /**
    * Given some Is, return an 'asynchronous' Process producing Os.
@@ -139,18 +91,15 @@ trait Writer[-I,O] { self =>
    * @param p
    * @return
    */
-  def process(p: Process0[I])
-             (implicit e: ExecutorService): Process[Task, Throwable \/ O] =
+  def process(p: Process0[I]): Process[Task, Throwable \/ O] =
     processV(p.map(_.right))
 
   /**
    *
    * @param p
-   * @param e
    * @return
    */
-  def processV(p: Process0[Throwable \/ I])
-             (implicit e: ExecutorService): Process[Task, Throwable \/ O] =
+  def processV(p: Process0[Throwable \/ I]): Process[Task, Throwable \/ O] =
     p through channel
 
   /**
@@ -158,28 +107,11 @@ trait Writer[-I,O] { self =>
    * The tasks don't wait for operations to complete.
    * @return
    */
-  def channel(implicit e: ExecutorService): Channel[Task, Throwable \/ I, Throwable \/ O] = {
-    def asyncV(v: Throwable \/ I): Task[Throwable \/ O] = Task(v) flatMap {
+  def channel: Channel[Task, Throwable \/ I, Throwable \/ O] =
+    scalaz.stream.channel.lift(v => Task(v) flatMap {
       case t@ -\/(_) => Task(t)
-      case \/-(i) => asyncTask(i)
-    }
-    scalaz.stream.channel.lift(asyncV(_))
-  }
-
-  /**
-   * A scalaz.concurrent.Task that runs asynchronously
-   * invoking futures that turns `I`s into `O`s.
-   * The Task does not wait for the future to complete execution.
-   * @param i
-   * @return
-   */
-  def asyncTask(i: => I)(implicit e: ExecutorService): Task[Throwable \/ O] =
-    Task.async { (cb: (Throwable \/ (Throwable \/ O)) => Unit) =>
-      Futures.addCallback(eval(i), new FutureCallback[Throwable \/ O]() {
-        def onSuccess(result: Throwable \/ O) = cb(result.right)
-        def onFailure(t: Throwable) = cb(t.left.right)
-      }, e)
-    }
+      case \/-(i) => asyncTask(i) // TODO: might be able to catch errors here!
+    })
 
   /**
    *
