@@ -94,14 +94,14 @@ object WriterProps extends Properties("Writer") {
       Task(if(y.isLeft) numErrors += 1)
     def successObserver(y:Throwable \/ Int): Task[Unit] =
       Task(if(y.isRight) numInts += 1)
-    val errorSync = sink lift errorObserver
-    val successSync = sink lift successObserver
+    val errorSink = sink lift errorObserver
+    val successSink = sink lift successObserver
 
     // create the process, and have it observed
     // both of the syncs above.
     val results = (p through idWriter[Int].channelV).
-      observe(errorSync).
-      observe(successSync).runLog.run
+      observe(errorSink).
+      observe(successSink).runLog.run
 
     val (errs,ints) = results.partition(_.isLeft)
     all(

@@ -74,10 +74,19 @@ object DeepDive {
     val channel = kw.channel
 
     // Prepare some data to write to Kinesis
+    val data = Process("Hello", ", ", "World", "!!!")
+
+    // Create a sink that processes the UserRecordResults
+    // as they come back from Kinesis
+    val errorLoggerSink: Sink[Task,Throwable \/ UserRecordResult] =
+      sink lift (v => Task(if(v.isLeft) println(v)))
+
     // Create a Process that feeds pipes data through the channel
     // The channel returns UserRecordResults (or errors)
+    // The errorLoggerSink is also attached as an observer,
+    // logging any errors.
     val process: Process[Task, Throwable \/ UserRecordResult] =
-      Process("Hello", ", ", "World", "!!!") through channel
+      (data through channel).observe(errorLoggerSink)
 
     // Now, run the process and obtain all the responses from Kinesis
     val results: Seq[Throwable \/ UserRecordResult] = process.runLog.run
