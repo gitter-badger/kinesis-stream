@@ -18,16 +18,14 @@ object E {
 import com.localytics.kinesis.E._
 
 object GettingStartedFast {
-  def gettingStarted : Process[Task, Throwable \/ UserRecordResult] = {
-    val kw = new KinesisWriter[String](new KinesisProducer()) {
+  val channel : Channel[Task, String, Throwable \/ UserRecordResult] =
+    new KinesisWriter[String](new KinesisProducer()) {
+      def partitionKey(s: String): String = s + "tubular"
       def toInputRecord(s: => String) = KinesisInputRecord(
         "my-stream", partitionKey(s), ByteBuffer.wrap(s.getBytes)
       )
-    }
-    val data = Process("Hello", ", ", "World", "!!!")
-    kw.process(data): Process[Task, Throwable \/ UserRecordResult]
-  }
-  def partitionKey(s: String): String = s + "tubular"
+    }.channel
+  (Process("Hello", ", ", "World", "!!!") through channel).run.run
 }
 
 /**
@@ -37,7 +35,7 @@ object GettingStartedFast {
  **/
 object DeepDive {
 
-  def deepDive : Channel[Task, Throwable \/ String, Throwable \/ UserRecordResult] = {
+  def deepDive : Channel[Task, String, Throwable \/ UserRecordResult] = {
 
     // The writer needs an actual AWS KinesisProducer object
     val kinesisProducer = new KinesisProducer()
@@ -45,7 +43,6 @@ object DeepDive {
     // Create a KinesisWriter that writes Strings to Kinesis
     // You can write anything that you can Serialize to bytes
     val kw = new KinesisWriter[String](kinesisProducer) {
-
       /**
        * Kinesis needs to know 3 things:
        *   - The stream to write the record to
@@ -63,27 +60,21 @@ object DeepDive {
     //// Now that we have a KinesisWriter, we can put it to use. ////
 
     // Get a scalaz-stream Channel that accepts Strings
-    // and outputs UserRecordResult returned from the KPL
+    // and outputs UserRecordResults returned from the KPL
     val channel = kw.channel
 
-    // Prepare some data to put into kinesis
-    val data = Process("Hello", ", ", "World", "!!!")
-
-    // Get the process from the Writer.
-    // The process feeds all the data to Kinesis and returns UserRecordResults
-    val process: Process[Task, Throwable \/ UserRecordResult] = kw.process(data)
+    // Prepare some data to write to Kinesis
+    // Create a Process that feeds pipes data through the channel
+    // The channel returns UserRecordResults (or errors)
+    val process: Process[Task, Throwable \/ UserRecordResult] =
+      Process("Hello", ", ", "World", "!!!") through channel
 
     // Now, run the process and obtain all the responses from Kinesis
-    val results: IndexedSeq[Throwable \/ UserRecordResult] = process.runLog.run
+    val results: Seq[Throwable \/ UserRecordResult] = process.runLog.run
 
-    // All that could have been accomplished more simply:
-    kw.write(Process("Hello", ", ", "World", "!!!"))
-
-    // But, it's having the Channel and Process that are important.
     // At this point you can get all sorts of info from the
     // UserResultRecords, such as shard id, sequence number, and more
-
-    // But for now, we'll just return the process
+    // But for now, we'll just return the channel
     channel
   }
 

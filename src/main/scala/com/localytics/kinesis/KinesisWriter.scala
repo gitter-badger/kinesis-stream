@@ -103,7 +103,9 @@ object KinesisInputRecord {
  */
 abstract class KinesisWriter[I](val kinesisProducer: KinesisProducer)
                                (implicit val e: ExecutorService)
-  extends Writer[I, UserRecordResult] { self =>
+  extends AsyncWriter[I, UserRecordResult] { self =>
+
+  type Result = Throwable \/ UserRecordResult
 
   /**
    * Turn the input into the 3 values Kinesis needs:
@@ -119,10 +121,10 @@ abstract class KinesisWriter[I](val kinesisProducer: KinesisProducer)
    * @param i
    * @return
    */
-  def asyncTask(i: => I): Task[Throwable \/ UserRecordResult] =
-    Task.async { (cb: (Throwable \/ (Throwable \/ UserRecordResult)) => Unit) =>
-      Futures.addCallback(writeToKinesis(i), new FutureCallback[Throwable \/ UserRecordResult]() {
-        def onSuccess(result: Throwable \/ UserRecordResult) = cb(result.right)
+  def asyncTask(i: => I): Task[Result] =
+    Task.async { (cb: (Throwable \/ (Result)) => Unit) =>
+      Futures.addCallback(writeToKinesis(i), new FutureCallback[Result]() {
+        def onSuccess(result: Result) = cb(result.right)
         def onFailure(t: Throwable) = cb(t.left.right)
       }, e)
     }
@@ -132,7 +134,7 @@ abstract class KinesisWriter[I](val kinesisProducer: KinesisProducer)
    * the 3 values that Kinesis needs, and then calling Kinesis.
    * @return
    */
-  def writeToKinesis(i: => I): ListenableFuture[Throwable \/ UserRecordResult] = {
+  private def writeToKinesis(i: => I): ListenableFuture[Result] = {
     val r = toInputRecord(i)
     // Presumably, KPL catches all errors, and never allows an exception
     // to be thrown (assumed because UserResultRecord has a successful field).

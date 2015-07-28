@@ -8,7 +8,7 @@ scalaVersion := "2.11.7"
 
 licenses += ("MIT", url("http://opensource.org/licenses/MIT"))
 
-unmanagedSourceDirectories in Compile += baseDirectory.value / "src/examples"
+unmanagedSourceDirectories in Compile += baseDirectory.value / "src/examples/scala"
 
 resolvers ++= Seq(
   "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
@@ -18,13 +18,12 @@ resolvers ++= Seq(
 
 libraryDependencies ++= Seq(
   "org.scalaz"        %% "scalaz-core"             % "7.1.3"
- ,"org.scalaz.stream" %% "scalaz-stream"           % "0.7.1a"
+ ,"org.scalaz.stream" %% "scalaz-stream"           % "0.7.2a"
  ,"com.amazonaws"      % "amazon-kinesis-producer" % "0.9.0"
  ,"org.scalacheck"    %% "scalacheck"              % "1.12.4"  % "test"
 )
 
-// TODO:
-//crossScalaVersions := Seq("2.9.3", "2.10.5", "2.11.7")
+crossScalaVersions := Seq("2.11.7", "2.12.0-M2")
 
 scalacOptions ++= Seq(
   "-language:implicitConversions"
@@ -42,11 +41,12 @@ scalacOptions ++= Seq(
 )
 
 // allow for ? instead of type lambdas. i.e Contravariant[Writer[?,O]]
-addCompilerPlugin("org.spire-math" % "kind-projector" % "0.6.2" cross CrossVersion.binary)
+// TODO: this isn't supported in some scala versions. Decide what to do.
+//addCompilerPlugin("org.spire-math" % "kind-projector" % "0.6.2" cross CrossVersion.binary)
 
 parallelExecution := false
 
-parallelExecution in Test := false
+parallelExecution in Test := true
 
 bintrayOrganization := Some("localytics")
 
