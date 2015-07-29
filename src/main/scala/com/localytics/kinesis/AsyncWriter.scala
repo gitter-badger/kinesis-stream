@@ -92,14 +92,14 @@ trait AsyncWriter[-I,O] { self =>
    * Pipes the given Process through this writers channel.
    */
   def process(p: Process0[I]): Process[Task, Throwable \/ O] =
-    p through channel
+    (p: Process[Task, I]) through channel
 
   /**
    * Pipes the given Process through this writers channel.
    * Any errors in the input are passed through the channel unchanged.
    */
   def processV(p: Process0[Throwable \/ I]): Process[Task, Throwable \/ O] =
-    p through channelV
+    (p: Process[Task, Throwable \/ I]) through channelV
 
   /**
    * An Channel running producing Os from Is via asyncTask

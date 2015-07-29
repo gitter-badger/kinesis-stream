@@ -1,6 +1,6 @@
 name := "kinesis-stream"
 
-version := "0.1"
+version := "0.1.1"
 
 organization := "com.localytics"
 
@@ -20,10 +20,11 @@ libraryDependencies ++= Seq(
   "org.scalaz"        %% "scalaz-core"             % "7.1.3"
  ,"org.scalaz.stream" %% "scalaz-stream"           % "0.7.2a"
  ,"com.amazonaws"      % "amazon-kinesis-producer" % "0.9.0"
+ ,"com.amazonaws"      % "amazon-kinesis-client"   % "1.5.1"
  ,"org.scalacheck"    %% "scalacheck"              % "1.12.4"  % "test"
 )
 
-crossScalaVersions := Seq("2.11.7", "2.12.0-M2")
+crossScalaVersions := Seq("2.10.5", "2.11.7") //, "2.12.0-M2")
 
 scalacOptions ++= Seq(
   "-language:implicitConversions"

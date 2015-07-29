@@ -83,7 +83,8 @@ object WriterProps extends Properties("Writer") {
 
   property("test writer observers") = forAll { (dataPoints: List[Int]) =>
     def go(i:Int) = if (even(i)) i else throw new IntException(i)
-    val p = dataPoints.toProc.map(a => Task.Try(go(a)))
+    val p: Process[Task, Throwable \/ Int] =
+      dataPoints.toProc.map(a => Task.Try(go(a)))
 
     // here we create some Sinks to simulate effects.
     // in the real world, one of these sinks might write
