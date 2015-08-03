@@ -13,7 +13,7 @@ will soon support the KCL, and maybe the original AWS API as well.
 
 ### Where to get it ###
 
-To get the latest version of the library, the following to your SBT build:
+To get the latest version of the library, add the following to your SBT build:
 
 ```
 // available for Scala 2.10.5, 2.11.7
