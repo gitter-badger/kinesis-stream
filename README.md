@@ -22,7 +22,7 @@ libraryDependencies += "com.localytics" %% "kinesis-stream" % "0.1.2"
 
 ## Examples
 
-All the examples that follow can be found in `src/main/scala/com/localytics/kinesis/Example.scala`
+All the examples that follow can be found in `src/examples/scala/com/localytics/kinesis/KPLExample.scala`
 
 ### Getting Started with KPL Streaming.
 
@@ -36,11 +36,12 @@ object GettingStartedFast {
   val channel : Channel[Task, String, Throwable \/ UserRecordResult] =
     new KinesisWriter[String](new KinesisProducer()) {
       def partitionKey(s: String): String = s + "tubular"
-      def toInputRecord(s: => String) = KinesisInputRecord(
+      def toInputRecord(s: String) = KinesisInputRecord(
         "my-stream", partitionKey(s), ByteBuffer.wrap(s.getBytes)
       )
     }.channel
-  (Process("Hello", ", ", "World", "!!!") through channel).run.run
+  val p: Process[Task, String] = Process("Hello", ", ", "World", "!!!")
+  (p through channel).run.run
 }
 ```
 
@@ -73,7 +74,7 @@ object DeepDive {
        * This info is captured in a KinesisInputRecord
        * which you create in toInputRecord using your input.
        */
-      def toInputRecord(s: => String) = KinesisInputRecord(
+      def toInputRecord(s: String) = KinesisInputRecord(
         "my-stream", "shard-" + s, ByteBuffer.wrap(s.getBytes)
       )
     }
@@ -85,7 +86,7 @@ object DeepDive {
     val channel = kw.channel
 
     // Prepare some data to write to Kinesis
-    val data = Process("Hello", ", ", "World", "!!!")
+    val data: Process[Task, String] = Process("Hello", ", ", "World", "!!!")
 
     // Create a sink that processes the UserRecordResults
     // as they come back from Kinesis
