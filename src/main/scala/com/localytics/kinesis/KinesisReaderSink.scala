@@ -129,12 +129,6 @@ class CheckPointer(maxTries: Int, backoffTimeMillis: Long) {
 
   def checkpoint(checkpointer: IRecordProcessorCheckpointer): Unit = {
 
-    /**
-     *
-     * @param checkpointer
-     * @param attemptNumber
-     * @return
-     */
     def attemptCheckpoint(checkpointer: IRecordProcessorCheckpointer,
                           attemptNumber: Int): CheckPointStatus =
       try {

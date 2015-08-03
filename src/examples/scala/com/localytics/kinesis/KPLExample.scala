@@ -19,7 +19,7 @@ object KPLExample {
     val channel : Channel[Task, String, Throwable \/ UserRecordResult] =
       new KinesisWriter[String](new KinesisProducer()) {
         def partitionKey(s: String): String = s + "tubular"
-        def toInputRecord(s: => String) = KinesisInputRecord(
+        def toInputRecord(s: String) = KinesisInputRecord(
           "my-stream", partitionKey(s), ByteBuffer.wrap(s.getBytes)
         )
       }.channel
@@ -51,7 +51,7 @@ object KPLExample {
          * This info is captured in a KinesisInputRecord
          * which you create in toInputRecord using your input.
          */
-        def toInputRecord(s: => String) = KinesisInputRecord(
+        def toInputRecord(s: String) = KinesisInputRecord(
           "my-stream", "shard-" + s, ByteBuffer.wrap(s.getBytes)
         )
       }

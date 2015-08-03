@@ -14,7 +14,7 @@ object AsyncWriter {
    * @return
    */
   def idWriter[A] = new AsyncWriter[A, A] { self =>
-    def asyncTask(i: => A): Task[Throwable \/ A] = Task.delay(i.right)
+    def asyncTask(i: A): Task[Throwable \/ A] = Task.delay(i.right)
   }
 
   // Covariant Functor instance for Writer
@@ -24,7 +24,7 @@ object AsyncWriter {
     new Contravariant[({type l[A]=AsyncWriter[A,O]})#l] {
       def contramap[A, B](r: AsyncWriter[A, O])(f: B => A): AsyncWriter[B, O] =
         new AsyncWriter[B, O] {
-          def asyncTask(b: => B): Task[Throwable \/ O] = r.asyncTask(f(b))
+          def asyncTask(b: B): Task[Throwable \/ O] = r.asyncTask(f(b))
         }
     }
 }
@@ -47,7 +47,7 @@ trait AsyncWriter[-I,O] { self =>
    * to catch any exception during the execution of that computation,
    * and propagate it back as a -\/
    */
-  def asyncTask(i: => I): Task[Throwable \/ O]
+  def asyncTask(i: I): Task[Throwable \/ O]
 
   /**
    * Run the input through this writers process, collecting the results.

@@ -24,7 +24,7 @@ object KinesisWriter {
     new Contravariant[KinesisWriter] {
       override def contramap[A, B](k: KinesisWriter[A])(f: B => A): KinesisWriter[B] =
         new KinesisWriter[B](k.kinesisProducer) {
-          def toInputRecord(b: => B): KinesisInputRecord[ByteBuffer] =
+          def toInputRecord(b: B): KinesisInputRecord[ByteBuffer] =
             k.toInputRecord(f(b))
         }
     }
@@ -55,7 +55,7 @@ object KinesisWriter {
       k: KinesisProducer, stream: String, partitioner: A => String)
      (mkInput: A => Array[Byte])(implicit es: ExecutorService): KinesisWriter[A] = {
     new KinesisWriter[A](k) {
-      def toInputRecord(a: => A) =
+      def toInputRecord(a: A) =
         KinesisInputRecord(stream, partitioner(a), ByteBuffer.wrap(mkInput(a)))
     }
   }
@@ -113,7 +113,7 @@ abstract class KinesisWriter[I](val kinesisProducer: KinesisProducer)
    * @param i
    * @return
    */
-  def toInputRecord(i: => I): KinesisInputRecord[ByteBuffer]
+  def toInputRecord(i: I): KinesisInputRecord[ByteBuffer]
 
   /**
    * A scalaz.concurrent.Task that runs asynchronously
@@ -121,7 +121,7 @@ abstract class KinesisWriter[I](val kinesisProducer: KinesisProducer)
    * @param i
    * @return
    */
-  def asyncTask(i: => I): Task[Result] =
+  def asyncTask(i: I): Task[Result] =
     Task.async { (cb: (Throwable \/ (Result)) => Unit) =>
       Futures.addCallback(writeToKinesis(i), new FutureCallback[Result]() {
         def onSuccess(result: Result) = cb(result.right)
@@ -134,7 +134,7 @@ abstract class KinesisWriter[I](val kinesisProducer: KinesisProducer)
    * the 3 values that Kinesis needs, and then calling Kinesis.
    * @return
    */
-  private def writeToKinesis(i: => I): ListenableFuture[Result] = {
+  private def writeToKinesis(i: I): ListenableFuture[Result] = {
     val r = toInputRecord(i)
     // Presumably, KPL catches all errors, and never allows an exception
     // to be thrown (assumed because UserResultRecord has a successful field).

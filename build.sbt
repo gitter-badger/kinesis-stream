@@ -1,6 +1,6 @@
 name := "kinesis-stream"
 
-version := "0.1.1"
+version := "0.1.2"
 
 organization := "com.localytics"
 
@@ -40,6 +40,11 @@ scalacOptions ++= Seq(
  ,"-Ywarn-value-discard"
  ,"-Xfuture"
 )
+
+val initCommands = """import scalaz._, Scalaz._, scalaz.stream._, scalaz.stream.Process._"""
+
+initialCommands in console := initCommands 
+initialCommands in consoleQuick := initCommands
 
 // allow for ? instead of type lambdas. i.e Contravariant[Writer[?,O]]
 // TODO: this isn't supported in some scala versions. Decide what to do.

@@ -129,13 +129,13 @@ object WriterProps extends Properties("Writer") {
 
   def badWriter[A] =
     new AsyncWriter[A, A] {
-      def asyncTask(a: => A): Task[Throwable \/ A] =
+      def asyncTask(a: A): Task[Throwable \/ A] =
         Task.delay(throw new StringException(a.toString))
     }
 
   def stringCharWriter =
     new AsyncWriter[String, List[Char]] { self =>
-      def asyncTask(a: => String): Task[Throwable \/ List[Char]] =
+      def asyncTask(a: String): Task[Throwable \/ List[Char]] =
         Task.delay(a.toList.right)
     }
 }
