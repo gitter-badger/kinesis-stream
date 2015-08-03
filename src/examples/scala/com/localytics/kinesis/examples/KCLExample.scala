@@ -1,8 +1,10 @@
-package com.localytics.kinesis
+package com.localytics.kinesis.examples
 
+import com.localytics.kinesis.{KCL, WorkerRecordsInput}
+
+import scala.collection.JavaConverters._
 import scalaz.concurrent.Task
 import scalaz.stream._
-import scala.collection.JavaConverters._
 
 object KCLExample {
 

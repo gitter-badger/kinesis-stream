@@ -1,10 +1,11 @@
-package com.localytics.kinesis
+package com.localytics.kinesis.examples
 
 import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
 
 import com.amazonaws.kinesis.producer.{KinesisProducer, UserRecordResult}
 import com.google.common.util.concurrent.MoreExecutors
+import com.localytics.kinesis.{KinesisInputRecord, KinesisWriter}
 
 import scalaz.\/
 import scalaz.concurrent.Task

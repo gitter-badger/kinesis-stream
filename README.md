@@ -22,6 +22,7 @@ libraryDependencies += "com.localytics" %% "kinesis-stream" % "0.1.2"
 
 ## Examples
 
+All the examples that follow can be found in `src/main/scala/com/localytics/kinesis/examples`
 All the examples that follow can be found in `src/examples/scala/com/localytics/kinesis/KPLExample.scala`
 
 ### Getting Started with KPL Streaming.
