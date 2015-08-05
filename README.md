@@ -17,7 +17,7 @@ To get the latest version of the library, add the following to your SBT build:
 
 ```
 // available for Scala 2.10.5, 2.11.7
-libraryDependencies += "com.localytics" %% "kinesis-stream" % "0.1.2"
+libraryDependencies += "com.localytics" %% "kinesis-stream" % "0.1.3"
 ```
 
 ## Examples
