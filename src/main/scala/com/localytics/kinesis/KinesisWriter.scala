@@ -19,16 +19,6 @@ object KinesisWriter {
   type StreamName   = String
   type PartitionKey = String
 
-  //
-  implicit def KinesisWriterCovariant(implicit es: ExecutorService) =
-    new Contravariant[KinesisWriter] {
-      override def contramap[A, B](k: KinesisWriter[A])(f: B => A): KinesisWriter[B] =
-        new KinesisWriter[B](k.kinesisProducer) {
-          def toInputRecord(b: B): KinesisInputRecord[ByteBuffer] =
-            k.toInputRecord(f(b))
-        }
-    }
-
   // Functor instance for ListenableFuture
   implicit val ListenableFutureFunctor = new Functor[ListenableFuture] {
     def map[A, B](fa: ListenableFuture[A])(f: A => B): ListenableFuture[B] =
@@ -41,104 +31,44 @@ object KinesisWriter {
         def isDone: Boolean = fa.isDone
       }
   }
-
-  /**
-   * Create a writer.
-   * @param k KinesisProducer
-   * @param stream The Kinesis stream name
-   * @param partitioner A function that uses the input data to choose a shard.
-   * @param mkInput A function to turn the input data into bytes.
-   * @tparam A The generic type of the input data.
-   * @return A KinesisWriter for the input data.
-   */
-  def noopWriter[A](
-      k: KinesisProducer, stream: String, partitioner: A => String)
-     (mkInput: A => Array[Byte])(implicit es: ExecutorService): KinesisWriter[A] = {
-    new KinesisWriter[A](k) {
-      def toInputRecord(a: A) =
-        KinesisInputRecord(stream, partitioner(a), ByteBuffer.wrap(mkInput(a)))
-    }
-  }
 }
 
 import KinesisWriter._
 
 /**
  * Represents the 3 values Kinesis needs:
- *   Stream name, Partition Key, and ByteBuffer (the payload)
- *
- * However, for flexibility, this let the payload be anything.
- * It just has to be converted to a ByteArray at write time.
- *
- * @param stream
- * @param partitionKey
- * @param payload
- * @tparam T
+ * @param stream Stream name
+ * @param partitionKey Partition Key
+ * @param payload the payload, as bytes
  */
-case class KinesisInputRecord[T](
+case class KinesisInputRecord(
   stream: StreamName,
   partitionKey: PartitionKey,
-  payload: T
-)
+  payload: ByteBuffer)
 
-/**
- *
- */
-object KinesisInputRecord {
 
-  implicit def fromBytes(k:KinesisInputRecord[Array[Byte]]): KinesisInputRecord[ByteBuffer] =
-    k.copy(payload = ByteBuffer.wrap(k.payload))
+object AbstractKinesisProducer {
+  implicit def AWSProducer(kp: KinesisProducer): AbstractKinesisProducer =
+    new AbstractKinesisProducer {
+      def addUserRecord(stream: String, partitionKey: String, data: ByteBuffer): ListenableFuture[UserRecordResult] =
+        kp.addUserRecord(stream, partitionKey, data)
+    }
+}
 
-  // functor instance
-  implicit val KinesisInputRecordFunctor: Functor[KinesisInputRecord] =
-    new Functor[KinesisInputRecord] {
-      def map[A, B](k: KinesisInputRecord[A])(f: A => B): KinesisInputRecord[B] =
-        new KinesisInputRecord[B](k.stream, k.partitionKey, f(k.payload))
-  }
+trait AbstractKinesisProducer {
+  def addUserRecord(stream: String,
+                    partitionKey: String,
+                    data: ByteBuffer): ListenableFuture[UserRecordResult]
 }
 
 /**
- * @param e Executor to handle their success and failure callbacks.
- * @tparam I
+ * A KinesisWriter gives a few nice functions for calling Kinesis
+ * But also gives access to lower level processes for more
+ * fine grained control.
  */
-abstract class KinesisWriter[I](val kinesisProducer: KinesisProducer)
-                               (implicit val e: ExecutorService)
-  extends AsyncWriter[I, UserRecordResult] { self =>
+case class KinesisWriter(kinesisProducer: AbstractKinesisProducer)
+  extends AsyncWriter[KinesisInputRecord,UserRecordResult]{
 
-  type Result = Throwable \/ UserRecordResult
-
-  /**
-   * Turn the input into the 3 values Kinesis needs:
-   *   Stream name, Partition Key, and ByteBuffer (the payload)
-   * @param i
-   * @return
-   */
-  def toInputRecord(i: I): KinesisInputRecord[ByteBuffer]
-
-  /**
-   * A scalaz.concurrent.Task that runs asynchronously
-   * invoking the future to write to Kinesis.
-   * @param i
-   * @return
-   */
-  def asyncTask(i: I): Task[Result] =
-    Task.async { (cb: (Throwable \/ (Result)) => Unit) =>
-      Futures.addCallback(writeToKinesis(i), new FutureCallback[Result]() {
-        def onSuccess(result: Result) = cb(result.right)
-        def onFailure(t: Throwable) = cb(t.left.right)
-      }, e)
-    }
-
-  /**
-   * Actually run the input on Kinesis by first converting it to
-   * the 3 values that Kinesis needs, and then calling Kinesis.
-   * @return
-   */
-  private def writeToKinesis(i: I): ListenableFuture[Result] = {
-    val r = toInputRecord(i)
-    // Presumably, KPL catches all errors, and never allows an exception
-    // to be thrown (assumed because UserResultRecord has a successful field).
-    // The map(_.right) here is just a formality.
-    kinesisProducer.addUserRecord(r.stream, r.partitionKey, r.payload).map(_.right)
-  }
+  def makeFuture(r: KinesisInputRecord): ListenableFuture[UserRecordResult] =
+    kinesisProducer.addUserRecord(r.stream, r.partitionKey, r.payload)
 }

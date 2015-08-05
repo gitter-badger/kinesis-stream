@@ -1,16 +1,24 @@
 package com.localytics.kinesis
 
+import com.google.common.util.concurrent.ListenableFuture
 import org.scalacheck.Properties
 import org.scalacheck.Prop._
-import AsyncWriter._
 
 import scalaz.concurrent.Task
 import scalaz.stream.{sink, Process}
 import scalaz.{-\/, \/, \/-}
 import scalaz.syntax.either._
 import scalaz.syntax.contravariant._
+import AsyncWriter._
 
 object WriterProps extends Properties("Writer") {
+
+  def stringCharWriter =
+    new AsyncWriter[String, List[Char]] { self =>
+      def makeFuture(a: String): ListenableFuture[List[Char]] =
+        FutureProcesses.pure(a.toList)
+    }
+
 
   // TODO: make generator for Process[A]
   implicit class RichList[A](l:List[A]) {
@@ -22,18 +30,18 @@ object WriterProps extends Properties("Writer") {
 
   property("simple example") = secure {
     val helloWorld = "Hello, world.".split(' ')
-    val result = stringCharWriter.run(Process(helloWorld:_*))
-    val expected = mkRight(helloWorld.map(_.toList))
+    val result = stringCharWriter.fireAndGet(Process(helloWorld:_*))
+    val expected = helloWorld.map(_.toList).toSeq
     all(result.size == 2, result == expected)
   }
 
   property("gracefully handle writing empty logs") = secure {
-    idWriter[Int].run(Process()).isEmpty
+    idWriter[Int].fireAndGet(Process()).isEmpty
   }
 
   property("identity writer") = forAll { (strings: List[String]) =>
-    val actual = idWriter.run(strings.toProc).filter(_.isRight)
-    val expected = mkRight(strings)
+    val actual = idWriter.fireAndGet(strings.toProc)
+    val expected = strings
     actual == expected
   }
 
@@ -42,24 +50,14 @@ object WriterProps extends Properties("Writer") {
     // the implicit for contravariant won't get picked up :(
     val w: AsyncWriter[String, String] = idWriter[String]
     val writer = w.contramap[List[Char]](_.mkString)
-    val actual: Seq[Throwable \/ String] =
-      writer.run(strings.map(_.toList).toProc)
-    val expected = mkRight(strings)
+    val actual: Seq[String] = writer.fireAndGet(strings.map(_.toList).toProc)
+    val expected = strings
     actual == expected
   }
 
-  // this test demonstrates that you must catch your own
-  // exceptions in any input that you provide to the writer.
-  // this could change in the future.
-  property("will not catch exceptions in async tasks") =
-    forAll { (dataPoints: List[Int]) => dataPoints.nonEmpty ==> {
-      // badWriter always throws exceptions, so if we get
-      // beyond the call to run, something is wrong.
-      // we should get an exception, and everything is good.
-      try { badWriter[Int].run(dataPoints.toProc); false }
-      catch { case e: StringException => true }
-    }}
 
+  // TODO: bring runV back as fireAndGetV, which catches exceptions.
+  /*
   property("handle streams with some good data and some errors") =
     forAll { (dataPoints: List[Int]) =>
       // each dataPoint will be randomly either even or odd.
@@ -111,6 +109,7 @@ object WriterProps extends Properties("Writer") {
       results.size == dataPoints.size
     )
   }
+    */
 
   case class IntException(i:Int) extends java.lang.Exception {
     override def getMessage = i.toString
@@ -126,17 +125,5 @@ object WriterProps extends Properties("Writer") {
   def all(l:Boolean*): Boolean = l.forall((b:Boolean) => b)
   def mkRight[A](as:Seq[A]) = as.map(\/-(_))
   def mkLeft [A](as:Seq[A]) = as.map(-\/(_))
-
-  def badWriter[A] =
-    new AsyncWriter[A, A] {
-      def asyncTask(a: A): Task[Throwable \/ A] =
-        Task.delay(throw new StringException(a.toString))
-    }
-
-  def stringCharWriter =
-    new AsyncWriter[String, List[Char]] { self =>
-      def asyncTask(a: String): Task[Throwable \/ List[Char]] =
-        Task.delay(a.toList.right)
-    }
 }
 

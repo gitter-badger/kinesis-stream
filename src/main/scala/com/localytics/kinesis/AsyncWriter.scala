@@ -1,20 +1,19 @@
 package com.localytics.kinesis
 
-import scalaz._
+import com.google.common.util.concurrent.ListenableFuture
+
+import scalaz.Contravariant
 import scalaz.concurrent.Task
-import scalaz.stream.{channel => _, _}
-import scalaz.syntax.either._
-import Process._
+import scalaz.stream.{Channel, channel, Process}
 
 object AsyncWriter {
-
   /**
    * The writer that simply returns its input.
    * @tparam A
    * @return
    */
-  def idWriter[A] = new AsyncWriter[A, A] { self =>
-    def asyncTask(i: A): Task[Throwable \/ A] = Task.delay(i.right)
+  def idWriter[A] = new AsyncWriter[A, A] {
+    def makeFuture(a:A) = FutureProcesses.pure(a)
   }
 
   // Covariant Functor instance for Writer
@@ -24,96 +23,66 @@ object AsyncWriter {
     new Contravariant[({type l[A]=AsyncWriter[A,O]})#l] {
       def contramap[A, B](r: AsyncWriter[A, O])(f: B => A): AsyncWriter[B, O] =
         new AsyncWriter[B, O] {
-          def asyncTask(b: B): Task[Throwable \/ O] = r.asyncTask(f(b))
+          def makeFuture(b: B): ListenableFuture[O] = r.makeFuture(f(b))
         }
     }
 }
 
-/**
- * Writer is now just a very thin wrapper over scalaz-stream
- * If you can produce a Task[O] from an I, then you get a few
- * nice little functions for building processes and channels.
- *
- * There are three categories of functions:
- *  - functions that run processes to completion, returning Unit
- *  - functions that run processes to completion, return the results
- *  - functions that return scalaz-stream Channels and Processes
- */
-trait AsyncWriter[-I,O] { self =>
+trait AsyncWriter[A,B] extends ProcessRunner[A,B] {
 
-  /**
-   * Given some i, produce a (potentially) asynchronous computation
-   * that produces a Throwable \/ O. It is the callers responsibility
-   * to catch any exception during the execution of that computation,
-   * and propagate it back as a -\/
-   */
-  def asyncTask(i: I): Task[Throwable \/ O]
+  def makeFuture(a:A): ListenableFuture[B]
 
-  /**
-   * Run the input through this writers process, collecting the results.
-   */
-  def run(p: Process0[I]): Seq[Throwable \/ O] = process(p).runLog.run
+  def runner(p:Process[Task, A]): Process[Task, B] =
+    runnerProcess(p) through FutureProcesses.futureChannel
 
-  /**
-   * Run the input, which could potentially contain errors,
-   * through this writers process. Any errors in the input
-   * are passed through to the output unchanged.
-   */
-  def runV(p: Process0[Throwable \/ I]): Seq[Throwable \/ O] =
-    processV(p).runLog.run
+  def runnerProcess(p:Process[Task, A]): Process[Task, ListenableFuture[B]] = {
+    val writerChannel: Channel[Task, A, ListenableFuture[B]] =
+      channel lift (a => Task(makeFuture(a)))
+    /*
+     * TODO:
+     * The buffer all here is extremely important for efficiency.
+     * However, it could be a big problem if p never ends.
+     * Maybe it would be better to buffer in batches.
+     * For example, `buffer(1024)` instead of `bufferAll`
+     * The Kinesis API and documentation should be read before making
+     * a change here.
+     */
+    (p through writerChannel).bufferAll
+  }
 
-  /**
-   * Run the input through this writers process, discarding the results.
-   */
-  def write(p: Process0[I]): Unit = process(p).run.run
-
-  /**
-   * Run the input through this writers process, and then pump
-   * the results into the given sink.
-   */
-  def writeToSink(p: Process0[I], s:Sink[Task, Throwable \/ O]): Unit =
-    process(p).observe(s).run.run
-
-  /**
-   * Run the input through this writers process, and then pump
-   * the results into the given sink.
-   */
-  def writeToSinkV(p: Process0[Throwable \/ I],
-                   s:Sink[Task, Throwable \/ O]): Unit =
-    processV(p).observe(s).run.run
-
-  /**
-   * Run the input through this writers process, discarding the results.
-   * Any errors in the input are simply discarded.
-   */
-  def writeV(p: Process0[Throwable \/ I]): Unit = processV(p).run.run
-
-  /**
-   * Pipes the given Process through this writers channel.
-   */
-  def process(p: Process0[I]): Process[Task, Throwable \/ O] =
-    (p: Process[Task, I]) through channel
-
-  /**
-   * Pipes the given Process through this writers channel.
-   * Any errors in the input are passed through the channel unchanged.
-   */
-  def processV(p: Process0[Throwable \/ I]): Process[Task, Throwable \/ O] =
-    (p: Process[Task, Throwable \/ I]) through channelV
-
-  /**
-   * An Channel running producing Os from Is via asyncTask
-   */
-  def channel: Channel[Task, I, Throwable \/ O] =
-    scalaz.stream.channel.lift(asyncTask(_))
-
-  /**
-   * An Channel running producing Os from Is via asyncTask.
-   * Any errors in the input are passed through the channel unchanged.
-   */
-  def channelV: Channel[Task, Throwable \/ I, Throwable \/ O] =
-    scalaz.stream.channel.lift(v => Task(v) flatMap {
-      case t@ -\/(_) => Task(t)
-      case \/-(i) => asyncTask(i) // TODO: might be able to catch errors here!
-    })
+  // TODO: go through history and bring this all back.
+  // This was the basis of the old AsyncWriter/KinesisWriter.
+  // It would be useful to bring back.
+  //
+  //  /**
+  //   * Given some i, produce a (potentially) asynchronous computation
+  //   * that produces a Throwable \/ O. It is the callers responsibility
+  //   * to catch any exception during the execution of that computation,
+  //   * and propagate it back as a -\/
+  //   */
+  //  def asyncTask(i: I): Task[Throwable \/ O]
+  //
+  //  /**
+  //   * A scalaz.concurrent.Task that runs asynchronously
+  //   * invoking the future to write to Kinesis.
+  //   * @param i
+  //   * @return
+  //   */
+  //  def asyncTask(i: I): Task[Result] =
+  //    Task.async { (cb: (Throwable \/ (Result)) => Unit) =>
+  //      Futures.addCallback(writeToKinesis(i), new FutureCallback[Result]() {
+  //        def onSuccess(result: Result) = cb(result.right)
+  //        def onFailure(t: Throwable) = cb(t.left.right)
+  //      }, e)
+  //    }
+  //
+  //  /**
+  //   * An Channel running producing Os from Is via asyncTask.
+  //   * Any errors in the input are passed through the channel unchanged.
+  //   */
+  //  def channelV: Channel[Task, Throwable \/ I, Throwable \/ O] =
+  //    scalaz.stream.channel.lift(v => Task(v) flatMap {
+  //      case t@ -\/(_) => Task(t)
+  //      case \/-(i) => asyncTask(i) // TODO: might be able to catch errors here!
+  //    })
 }
