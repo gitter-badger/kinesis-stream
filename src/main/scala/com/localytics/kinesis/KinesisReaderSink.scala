@@ -2,7 +2,7 @@ package com.localytics.kinesis
 
 import java.net.InetAddress
 import java.util.UUID
-import java.util.concurrent.{ScheduledExecutorService, Executors}
+import java.util.concurrent.Executors
 
 import com.amazonaws.AmazonClientException
 import com.amazonaws.auth.profile.ProfileCredentialsProvider

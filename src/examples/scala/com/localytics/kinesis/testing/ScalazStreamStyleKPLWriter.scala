@@ -5,7 +5,7 @@ import scalaz.stream.Process
 import Common._
 
 /**
- * Writes to Common.kplTestStream
+ * Writes 100k records to Common.kplTestStream
  */
 object ScalazStreamStyleKPLWriter {
   def main(args: Array[String]): Unit = withProducer { p =>

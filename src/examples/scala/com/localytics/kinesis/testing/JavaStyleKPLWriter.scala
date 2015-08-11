@@ -10,7 +10,6 @@ import Common._
  * Writes 100k records to Common.kplTestStream
  */
 object JavaStyleKPLWriter {
-
   def main(args: Array[String]): Unit = withProducer { p =>
     val prefix = args.headOption.getOrElse("test")
     val words = (1 to 100000).map(i => s"$prefix$i")
