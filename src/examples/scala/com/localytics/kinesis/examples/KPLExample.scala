@@ -13,8 +13,8 @@ object KPLExample {
   object GettingStartedFast {
     val writer = KinesisWriter(new KinesisProducer())
     def partitionKey(s: String): String = s + "tubular"
-    def toInputRecord(s: String) = KinesisInputRecord(
-      "my-stream", partitionKey(s), ByteBuffer.wrap(s.getBytes))
+    def toInputRecord(s: String) =
+      KinesisInputRecord("my-stream", partitionKey(s), s)
     val input = Process("Hello", ", ", "World", "!!!")
     writer.fireAndForget(input map toInputRecord)
   }
@@ -43,9 +43,8 @@ object KPLExample {
        *
        * Here, we'll just convert some Strings to KinesisInputRecords.
        */
-      def toInputRecord(s: String) = KinesisInputRecord(
-        "my-stream", "shard-" + s, ByteBuffer.wrap(s.getBytes)
-      )
+      def toInputRecord(s: String) =
+        KinesisInputRecord("my-stream", "shard-" + s, s)
 
       //// Now that we have a KinesisWriter, we can put it to use. ////
 

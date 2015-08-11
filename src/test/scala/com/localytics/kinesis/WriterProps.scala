@@ -9,14 +9,14 @@ import scalaz.stream.{sink, Process}
 import scalaz.{-\/, \/, \/-}
 import scalaz.syntax.either._
 import scalaz.syntax.contravariant._
-import AsyncWriter._
+import FutureRunner._
 
 object WriterProps extends Properties("Writer") {
 
   def stringCharWriter =
-    new AsyncWriter[String, List[Char]] { self =>
+    new FutureRunner[String, List[Char]] { self =>
       def makeFuture(a: String): ListenableFuture[List[Char]] =
-        FutureProcesses.pure(a.toList)
+        FutureRunner.pure(a.toList)
     }
 
 
@@ -48,7 +48,7 @@ object WriterProps extends Properties("Writer") {
   property("contramap writer") = forAll { (strings: List[String]) =>
     // if we dont explicitly declare this type,
     // the implicit for contravariant won't get picked up :(
-    val w: AsyncWriter[String, String] = idWriter[String]
+    val w: FutureRunner[String, String] = idWriter[String]
     val writer = w.contramap[List[Char]](_.mkString)
     val actual: Seq[String] = writer.fireAndGet(strings.map(_.toList).toProc)
     val expected = strings

@@ -1,6 +1,6 @@
 name := "kinesis-stream"
 
-version := "0.1.3"
+version := "0.1.4"
 
 organization := "com.localytics"
 
@@ -22,6 +22,7 @@ libraryDependencies ++= Seq(
  ,"com.amazonaws"      % "amazon-kinesis-producer" % "0.9.0"
  ,"com.amazonaws"      % "amazon-kinesis-client"   % "1.5.1"
  ,"com.google.guava"   % "guava"                   % "18.0"
+ ,"commons-io"         % "commons-io"              % "2.4"
  ,"org.scalacheck"    %% "scalacheck"              % "1.12.4"  % "test"
 )
 
