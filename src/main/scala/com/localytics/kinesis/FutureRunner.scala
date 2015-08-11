@@ -103,12 +103,19 @@ trait FutureRunner[A,B] extends ProcessRunner[A,B] {
     runnerProcess(p) through FutureRunner.futureChannel
 
   /**
+   * TODO:
+   * The bufferAll here is extremely important for efficiency.
+   * However, it could be a big problem if p never ends.
+   * Maybe it would be better to buffer in batches.
+   * For example, `buffer(1024)` instead of `bufferAll`
+   * The Kinesis API and documentation should be read before making
+   * a change here.
    *
    * @param p
    * @return
    */
   def runnerProcess(p:Process[Task, A]): Process[Task, ListenableFuture[B]] =
-    p through writerChannel
+    (p through writerChannel).bufferAll
 
   /**
    *
@@ -116,7 +123,7 @@ trait FutureRunner[A,B] extends ProcessRunner[A,B] {
    * @return
    */
   def runnerProcessZipped(p:Process[Task, A]): Process[Task, (A, ListenableFuture[B])] =
-    p observeThrough writerChannel
+    (p observeThrough writerChannel).bufferAll
 
   // TODO: consider bringing this back.
   // This was the basis of the old AsyncWriter/KinesisWriter.
