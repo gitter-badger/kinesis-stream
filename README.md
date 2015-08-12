@@ -6,6 +6,7 @@ kinesis-stream is a scalaz-stream API for Amazon Kinesis.
 kinesis-stream currently supports the KPL, but hopefully
 will soon support the KCL, and maybe the original AWS API as well.
 
+[![Download](https://api.bintray.com/packages/localytics/maven/kinesis-stream/images/download.svg)](https://bintray.com/localytics/maven/kinesis-stream/_latestVersion)
 [![Build Status](https://travis-ci.org/localytics/kinesis-stream.png?branch=master)](https://travis-ci.org/joshcough/kinesis-stream)
 [![Coverage Status](https://coveralls.io/repos/localytics/kinesis-stream/badge.svg?branch=master&service=github)](https://coveralls.io/github/localytics/kinesis-stream?branch=master)
 [![Join the chat at https://gitter.im/joshcough/kinesis-stream](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/localytics/kinesis-stream?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
@@ -17,7 +18,7 @@ To get the latest version of the library, add the following to your SBT build:
 
 ```
 // available for Scala 2.10.5, 2.11.7
-libraryDependencies += "com.localytics" %% "kinesis-stream" % "0.1.3"
+libraryDependencies += "com.localytics" %% "kinesis-stream" % "0.2.0"
 ```
 
 ## Examples
