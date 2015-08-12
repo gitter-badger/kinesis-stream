@@ -3,7 +3,7 @@ package com.localytics.kinesis.testing
 import java.util.concurrent.Executors
 
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
-import com.amazonaws.kinesis.producer.{Configuration, KinesisProducer}
+import com.amazonaws.services.kinesis.producer.{KinesisProducerConfiguration, KinesisProducer}
 
 object Common {
 
@@ -14,9 +14,8 @@ object Common {
   val credentialsProvider = new ProfileCredentialsProvider()
 
   val kinesisProducer: KinesisProducer = {
-    val conf = new Configuration
-    conf.setAwsSecretKey(credentialsProvider.getCredentials.getAWSSecretKey)
-    conf.setAwsAccessKeyId(credentialsProvider.getCredentials.getAWSAccessKeyId)
+    val conf = new KinesisProducerConfiguration
+    conf.setCredentialsProvider(credentialsProvider)
     conf.setRegion("us-east-1")
     conf.setAggregationEnabled(true)
     new KinesisProducer(conf)

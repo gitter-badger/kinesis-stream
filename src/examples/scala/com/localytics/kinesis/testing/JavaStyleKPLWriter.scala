@@ -1,7 +1,7 @@
 package com.localytics.kinesis.testing
 
 import java.nio.ByteBuffer
-import com.amazonaws.kinesis.producer.UserRecordResult
+import com.amazonaws.services.kinesis.producer.UserRecordResult
 import com.google.common.util.concurrent.{FutureCallback, Futures}
 
 import Common._

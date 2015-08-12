@@ -1,6 +1,6 @@
 name := "kinesis-stream"
 
-version := "0.1.4"
+version := "0.2.0"
 
 organization := "com.localytics"
 
@@ -19,7 +19,7 @@ resolvers ++= Seq(
 libraryDependencies ++= Seq(
   "org.scalaz"        %% "scalaz-core"             % "7.1.3"
  ,"org.scalaz.stream" %% "scalaz-stream"           % "0.7.2a"
- ,"com.amazonaws"      % "amazon-kinesis-producer" % "0.9.0"
+ ,"com.amazonaws"      % "amazon-kinesis-producer" % "0.10.0"
  ,"com.amazonaws"      % "amazon-kinesis-client"   % "1.5.1"
  ,"com.google.guava"   % "guava"                   % "18.0"
  ,"commons-io"         % "commons-io"              % "2.4"

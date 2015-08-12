@@ -21,6 +21,8 @@ object BasicKCLReader {
   def main(args: Array[String]): Unit = {
     println("running KCL")
 
+    val appName = args.headOption.getOrElse("sample-app")
+
     java.security.Security.setProperty("networkaddress.cache.ttl", "60")
     val workerId = InetAddress.getLocalHost.getCanonicalHostName + ":" + UUID.randomUUID
 
@@ -36,7 +38,7 @@ object BasicKCLReader {
         }
       })
       .config(new KinesisClientLibConfiguration(
-        "sample-app-mf4", kplTestStream, credentialsProvider, workerId
+        appName, kplTestStream, credentialsProvider, workerId
       )
       .withInitialPositionInStream(InitialPositionInStream.LATEST))
       .execService(Executors.newCachedThreadPool).build()

@@ -3,7 +3,7 @@ package com.localytics.kinesis
 import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
 
-import com.amazonaws.kinesis.producer.{UserRecordFailedException, KinesisProducer, UserRecordResult}
+import com.amazonaws.services.kinesis.producer.{UserRecordFailedException, KinesisProducer, UserRecordResult}
 import com.google.common.util.concurrent.ListenableFuture
 
 import scalaz.concurrent.Task

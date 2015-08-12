@@ -2,7 +2,7 @@ package com.localytics.kinesis.examples
 
 import java.nio.ByteBuffer
 
-import com.amazonaws.kinesis.producer.{KinesisProducer, UserRecordResult}
+import com.amazonaws.services.kinesis.producer.{KinesisProducer, UserRecordResult}
 import com.localytics.kinesis.{KinesisInputRecord, KinesisWriter}
 
 import scalaz.concurrent.Task
